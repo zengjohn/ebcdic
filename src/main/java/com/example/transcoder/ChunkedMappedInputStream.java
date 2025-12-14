@@ -5,10 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.reflect.Method;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardOpenOption;
@@ -40,7 +36,7 @@ public class ChunkedMappedInputStream extends InputStream {
     }
 
     private void mapNext() throws IOException {
-        unmap(mapped);
+        UnmapUtil.unmap(mapped);
         if (position >= fileSize) {
             mapped = null;
             return;
@@ -91,41 +87,9 @@ public class ChunkedMappedInputStream extends InputStream {
     @Override
     public void close() throws IOException {
         try {
-            unmap(mapped);
+            UnmapUtil.unmap(mapped);
         } finally {
             channel.close();
-        }
-    }
-
-    /**
-     * Attempts to unmap a MappedByteBuffer to release the underlying memory.
-     * Uses several reflection strategies to support different JDKs.
-     */
-    private static void unmap(MappedByteBuffer buffer) {
-        if (buffer == null) return;
-        try {
-            // Java 9+: invoke Cleaner via reflection on DirectByteBuffer
-            Method cleanerMethod = buffer.getClass().getMethod("cleaner");
-            cleanerMethod.setAccessible(true);
-            Object cleaner = cleanerMethod.invoke(buffer);
-            if (cleaner != null) {
-                Method clean = cleaner.getClass().getMethod("clean");
-                clean.setAccessible(true);
-                clean.invoke(cleaner);
-            }
-            log.debug("Unmapped MappedByteBuffer via cleaner()");
-            return;
-        } catch (Throwable t) {
-            // fallback to other strategies
-        }
-
-        try {
-            // Try sun.misc.Unsafe approach (older JVMs)
-            MethodHandles.Lookup lookup = MethodHandles.lookup();
-            MethodHandle mh = lookup.findVirtual(buffer.getClass(), "cleaner", MethodType.methodType(Method.class.getMethod("getReturnType").getReturnType()));
-            // ignore; this is best-effort
-        } catch (Throwable ignored) {
-            // best effort only
         }
     }
 }

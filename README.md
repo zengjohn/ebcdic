@@ -45,3 +45,22 @@ java -cp target/ebcdic-csv-transcoder-1.0.0.jar com.example.transcoder.util.Char
 - 你只需要把 sample 文件拿到本地并在有 ICU4J 的 JVM 上运行上面两个工具，就能很快确认 Java/ICU4J 环境中可用的 charset 名称，以及哪个名称能正确把 EBCDIC-IBM1388 解为正确字符。
 - 如果你愿意，把那个 sample 发给我（注意敏感数据），我可以帮你判断（但目前我无法在你的机器上直接运行），所以最佳办法是在你的环境本地运行 CharsetTester 并按输出人工核验。
 - 一旦确定了在你环境中可用的名字（例如 "Cp1388" 或 "ibm-1388"），就把那个名字传给转码程序 TranscoderMain 的 inputCharset 参数，或把 resolveCharset 的 alias map 固定好。
+
+
+
+
+
+- 在 Java 9+ 上若遇到反射受限（IllegalAccess），可通过 JVM 启动参数放开访问，例如（如需要）： --add-opens java.base/sun.misc=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED （视 JVM 版本和实际反射路径可能需调整）
+
+提交与测试步骤建议
+
+1. 在本地仓库（或远程分支）替换以上三个文件（对应路径 src/main/java/com/example/transcoder/...）。
+2. 本地构建与单元/编译检查：
+   - mvn -U -DskipTests=false clean package
+   - 若使用 Lombok，确保 IDE 已启用 Lombok 注解处理器。
+3. 运行集成测试（用小文件先手工跑）：
+   - 先用 TestDataGenerator 生成一个小样本（UTF-8 或你用来验证的 EBCDIC 样本）。
+   - 用 TranscoderMain 将其转码为 UTF-8，确保输出正确、无异常且无过度的堆外内存增长。
+4. 观察 native/堆外内存（验证 unmap 是否生效）：
+   - 运行转码任务时观察进程本地内存（例如使用 `ps aux` / `top` / `jcmd <pid> VM.native_memory summary` 或 jvisualvm）。如果 unmap 生效，长期运行时 native 内存不应持续增长到文件体积级别。
+5. 若在 Java9+ 报 IllegalAccessException，可按上面说明加上 --add-opens 对应模块（或运行在 Java8 下进行验证）。
