@@ -54,9 +54,9 @@ public class TranscoderMain {
 
         // Create InputStream backed by MappedByteBuffer chunks
         try (ChunkedMappedInputStream in = new ChunkedMappedInputStream(options.getInputFile(), options.getChunkSize());
-             Reader reader = new InputStreamReader(in, inCharset);
+             Reader reader = new BufferedReader(new InputStreamReader(in, inCharset), 64*1024);
              ChunkedMappedOutputStream outStream = new ChunkedMappedOutputStream(options.getOutputFile(), options.getChunkSize());
-             Writer writer = new OutputStreamWriter(outStream, outCharset)) {
+             Writer writer = new BufferedWriter(new OutputStreamWriter(outStream, outCharset), 64*1024) ) {
 
             CsvParserStrategy parserStrategy;
             if ("commons".equalsIgnoreCase(options.getParser())) {

@@ -78,8 +78,8 @@ public class ChunkedMappedInputStream extends InputStream {
             off += toRead;
             len -= toRead;
             totalRead += toRead;
-            // if we satisfied at least one byte, return immediately to allow decoder to process
-            break;
+            // break; // 在 ChunkedMappedInputStream.read(byte[],off,len) 中移除那个早期 return/break，让它循环读取直到填满请求长度或到达 EOF——这样能减少 read 调用次数，提高性能，且仍然保持跨块正确性（因为每次读取都会先把 mapped 的 bytes 复制到目标数组，再 unmap）。 这样一次 read 可以跨多个映射块复制数据到用户缓冲区，减少系统/方法调用次数并提升吞吐。
+            // continue loop to try to satisfy more bytes (possibly mapNext and continue)
         }
         return totalRead == 0 ? -1 : totalRead;
     }
